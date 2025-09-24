@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>校內分機表</title>
+  <meta name="theme-color" content="#317EFB"/>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js');
+      });
+    }
+  </script>
+  <style>
+    body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;margin:20px;background:#f7f9fb;color:#222}
+    h1{font-size:1.4rem;margin-bottom:0.2rem}
+    .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+    form{flex:1;display:flex;gap:8px}
+    input[type="text"]{padding:8px 10px;font-size:1rem;flex:1;border-radius:6px;border:1px solid #ccc}
+    select,button{padding:8px 10px;border-radius:6px;border:1px solid #ccc;background:#fff}
+    .results{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+    .card{background:#fff;padding:10px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #eee}
+    table{width:100%;border-collapse:collapse;margin-top:18px;background:#fff;border-radius:8px;overflow:hidden}
+    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;font-size:0.95rem}
+    th{background:#fafafa;position:sticky;top:0}
+    .count{margin-left:auto;color:#333;font-weight:600}
+  </style>
+</head>
+<body>
+  <h1>校內分機表</h1>
+
+  <div class="controls">
+    <form id="searchForm">
+      <input id="q" type="text" placeholder="輸入姓名/職稱或分機 (Enter 或 搜尋鍵)" />
+      <button id="searchBtn" type="submit">搜尋</button>
+    </form>
+    <select id="sort">
+      <option value="relevance">依相關性</option>
+      <option value="ext_asc">分機 ↑</option>
+      <option value="ext_desc">分機 ↓</option>
+    </select>
+    <button id="showAll">顯示全部</button>
+    <div class="count" id="count">共 3 筆</div>
+  </div>
+
+  <div class="results" id="results"></div>
+
+  <h2 style="margin-top:20px">完整表格</h2>
+  <div style="overflow:auto;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+    <table id="mainTable">
+      <thead>
+        <tr><th>#</th><th>姓名/職稱</th><th>分機</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+<script>
+const DATA = [
+  {
+    "ext": "5419",
+    "name_guess": "許朝昇主任"
+  },
+  {
+    "ext": "5719",
+    "name_guess": "劉宇欣"
+  },
+  {
+    "ext": "5201",
+    "name_guess": "王小明老師"
+  }
+];
+
+function normalize(s){return (s||'').toString().normalize('NFKC').toLowerCase();}
+
+function render(items){
+  const resultsEl=document.getElementById('results');
+  const tableBody=document.querySelector('#mainTable tbody');
+  resultsEl.innerHTML='';
+  tableBody.innerHTML='';
+  if(items.length===0){resultsEl.innerHTML='<div>查無結果</div>';return;}
+  items.forEach((it,i)=>{
+    const card=document.createElement('div');
+    card.className='card';
+    card.innerHTML=`<div><strong>${it.name_guess||'—'}</strong></div>
+                    <div>分機: ${it.ext||'—'}</div>`;
+    resultsEl.appendChild(card);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i+1}</td><td>${it.name_guess||''}</td><td>${it.ext||''}</td>`;
+    tableBody.appendChild(tr);
+  });
+  document.getElementById('count').textContent=`共 ${items.length} 筆`;
+}
+
+function search(showAll=false){
+  const q=normalize(document.getElementById('q').value.trim());
+  let items=DATA;
+  if(!showAll && q!==''){items=DATA.filter(it=>normalize(it.name_guess).includes(q)||normalize(it.ext).includes(q));}
+  const sort=document.getElementById('sort').value;
+  if(sort==='ext_asc'){items=items.slice().sort((a,b)=>(a.ext||'').localeCompare(b.ext||''));}
+  if(sort==='ext_desc'){items=items.slice().sort((a,b)=>(b.ext||'').localeCompare(a.ext||''));}
+  render(items);
+}
+
+document.getElementById('searchForm').addEventListener('submit', e=>{e.preventDefault();search(false);});
+document.getElementById('q').addEventListener('keydown', e=>{if(e.key==='Enter'){e.preventDefault();search(false);}});
+document.getElementById('q').addEventListener('search', ()=>search(false));
+document.getElementById('showAll').addEventListener('click',()=>{document.getElementById('q').value='';search(true);});
+
+// 初始載入
+search(true);
+</script>
+</body>
+</html>
