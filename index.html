@@ -26,9 +26,6 @@
     button#showAll{background:#eee}
     .results{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
     .card{background:#fff;padding:10px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06);border:1px solid #eee}
-    table{width:100%;border-collapse:collapse;margin-top:18px;background:#fff;border-radius:8px;overflow:hidden}
-    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;font-size:0.95rem}
-    th{background:#fafafa;position:sticky;top:0}
     .count{margin-left:auto;color:#333;font-weight:600}
   </style>
 </head>
@@ -51,16 +48,6 @@
 
   <div class="results" id="results"></div>
 
-  <h2 style="margin-top:20px">完整表格</h2>
-  <div style="overflow:auto;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
-    <table id="mainTable">
-      <thead>
-        <tr><th>#</th><th>姓名/職稱</th><th>分機</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
 <script>
 let DATA = [];
 
@@ -68,19 +55,18 @@ function normalize(s){return (s||'').toString().normalize('NFKC').toLowerCase();
 
 function render(items){
   const resultsEl=document.getElementById('results');
-  const tableBody=document.querySelector('#mainTable tbody');
   resultsEl.innerHTML='';
-  tableBody.innerHTML='';
-  if(items.length===0){resultsEl.innerHTML='<div>查無結果</div>';document.getElementById('count').textContent='共 0 筆';return;}
+  if(items.length===0){
+    resultsEl.innerHTML='<div>查無結果</div>';
+    document.getElementById('count').textContent='共 0 筆';
+    return;
+  }
   items.forEach((it,i)=>{
     const card=document.createElement('div');
     card.className='card';
     card.innerHTML=`<div><strong>${it.name_guess||'—'}</strong></div>
                     <div>分機: ${it.ext||'—'}</div>`;
     resultsEl.appendChild(card);
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${i+1}</td><td>${it.name_guess||''}</td><td>${it.ext||''}</td>`;
-    tableBody.appendChild(tr);
   });
   document.getElementById('count').textContent=`共 ${items.length} 筆`;
 }
