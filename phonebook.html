@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>分機查詢系統（新店校區）</title>
+<style>
+  :root{
+    --bg:#f3f4f6;
+    --card:#ffffff;
+    --text:#1f2937;
+    --muted:#6b7280;
+    --accent:#2563eb;
+    --accent-light:#dbeafe;
+    --shadow:0 8px 24px rgba(0,0,0,0.12);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b1220;
+      --card:#111827;
+      --text:#f9fafb;
+      --muted:#9ca3af;
+      --accent:#3b82f6;
+      --accent-light:#172554;
+      --shadow:0 8px 24px rgba(0,0,0,0.6);
+    }
+  }
+
+  html,body{height:100%;margin:0;font-family:system-ui,'Noto Sans TC',Arial;background:var(--bg);color:var(--text);}
+  body{display:flex;justify-content:center;padding:20px}
+  .container{width:100%;max-width:820px;margin-top:20px;text-align:center;animation:fadeIn .36s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  h1{font-size:22px;margin:0 0 12px;font-weight:700}
+  .controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center;margin-bottom:14px;padding:16px;background:var(--card);border-radius:14px;box-shadow:var(--shadow);}
+  .controls > *{flex:1;min-width:160px}
+  input[type="text"],select{padding:12px;border-radius:10px;border:1px solid #d1d5db;font-size:16px;width:100%;box-sizing:border-box;transition:.12s}
+  input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
+  #resultWrap{display:none;margin-top:16px}
+  .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;}
+  .tableWrap{max-height:56vh;overflow:auto}
+  table{width:100%;border-collapse:collapse;min-width:600px}
+  th,td{padding:12px;text-align:left;border-bottom:1px solid rgba(0,0,0,0.06)}
+  th{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);cursor:pointer;position:sticky;top:0;z-index:3;color:var(--accent);font-weight:700}
+  tr:hover td{background:rgba(37,99,235,0.04)}
+  @media (max-width:720px){
+    .controls{flex-direction:column;align-items:stretch}
+    table{min-width:100%}
+    th:nth-child(4),td:nth-child(4){display:none}
+  }
+  .small{font-size:13px;color:var(--muted);padding:12px;text-align:left}
+  .meta{display:flex;justify-content:space-between;padding:10px 14px;color:var(--muted);font-size:13px}
+  .highlight{color:var(--accent);font-weight:600}
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>分機查詢系統（新店校區）</h1>
+
+    <div class="controls" role="region" aria-label="搜尋控制">
+      <input id="search" type="text" placeholder="輸入關鍵字（姓名 / 部門 / 分機 / 辦公室編號），輸入任一字即可模糊搜尋" aria-label="搜尋欄" />
+      <select id="deptFilter" aria-label="部門篩選"><option value="">全部部門</option></select>
+      <select id="sortBy" aria-label="排序方式">
+        <option value="">不排序</option>
+        <option value="姓名">依姓名</option>
+        <option value="部門">依部門</option>
+        <option value="分機">依分機</option>
+      </select>
+    </div>
+
+    <div id="resultWrap">
+      <div class="card">
+        <div class="meta"><div id="count" class="small"></div><div class="small">點標題可快速排序（或用右側下拉）</div></div>
+        <div class="tableWrap" id="tableWrap">
+          <table id="table" role="table" aria-label="查詢結果">
+            <thead>
+              <tr>
+                <th data-key="部門">部門</th>
+                <th data-key="姓名">姓名</th>
+                <th data-key="分機">分機</th>
+                <th data-key="辦公室編號">辦公室編號</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div id="empty" class="small" style="display:none">無符合資料。</div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+/* ========== 完整 data 陣列（從原始檔案完整貼回） ========== */
+const data = [
+["部門","姓名","分機","辦公室編號"],
+["…","耕莘健康管理專科學校","2219-1131","…"],
+["校長室","…","2219-7718","…"],
+["副校長室","黃秉炘副校長","5114","…"],
+["秘書室 C208","林孟葳主任","5115","C208"],
+["秘書室 C208","黃湦秀秘書","5116","C208"],
+["秘書室 C208","沈君儀秘書","5117","C208"],
+["秘書室 C208","警衛室分機","5119","C208"],
+["教務處(S211)","莊禮聰主任","5211","S211"],
+["教務處註冊組","吳俐雯組長","5212","S211"],
+["教務處註冊組","陳思涵","5222","S211"],
+["教務處註冊組","林媼淑","5214","S211"],
+["教務處課務組","許玉嫺組長","5215","S211"],
+["教務處課務組","李艷瑢","5216","S211"],
+["教務處課務組","姜志誠","5217","S211"],
+["教務處綜合業務組","徐慧嫻組長","5213","S211"],
+["教務處綜合業務組","李麗美","5218","S211"],
+["教務處校務研究組","廖碩彥","5218","S211"],
+["教務處教學資源中心","江悅慈中心主任","5220","S211"],
+["教務處教學資源中心","陳怡萍","5219","S211"],
+["教務處全人教育中心","傅乙庭中心主任","5223","S211"],
+["教務處全人教育中心","陳素靖","5221","S211"],
+["教務處全人教育中心","侯玉欣","5221","S211"],
+["學務處(C109)","林玫君主任","5311","C109"],
+["課外活動組","陳宣佑組長","5312","C109"],
+["課外活動組","王譓霓","5313","C109"],
+["課外活動組","勤瑞瑜","5314","C109"],
+["課外活動組","李書秉","5316","C109"],
+["課外活動組","張倩玉","6517","C109"],
+["體運組(C108)","施秀蓉組長","5323","C108"],
+["體運組(C109)","陳靜玲","5324","C108"],
+["體運組(C110)","倪雅華","5324","C108"],
+["身促組（S110)","朱世廷組長","5331","S110"],
+["身促組（S110)","鄭棨中","5336","S110"],
+["身促組（S110)","張淑淳","5337","S110"],
+["身促組（S110)","游千慧","5334","S110"],
+["身促組（S110)","個諮室","5338","S110"],
+["健康中心(C102)","朱世廷組長","5322","C102"],
+["健康中心(C102)","黃虹瑋","5321","C102"],
+["健康中心(C102)","蔡宜恬","5325","C102"],
+["T505-1","蕭慧瑛","6524","T505"],
+["T505-1","王玉華","6525","T505"],
+["資源教室","汪美鳳","5332","S110"],
+["資源教室","吳芳諭","5340","S110"],
+["資源教室","趙佳珍","5333","S110"],
+["團輔室(S109)","…","5339","S109"],
+["原住民資源中心","陳宣佑中心主任","5312","S110"],
+["原住民資源中心","張倩玉","6526","S110"],
+["生輔組(C107)","毛遠薪副組長","5320","C107"],
+["生輔組(C107)","陳耕翰教官","5317","C107"],
+["生輔組(C107)","李月純教官","5317","C107"],
+["生輔組(C107)","張籃云","5318","C107"],
+["生輔組(C107)","阮正旭","5318","C107"],
+["生輔組(C107)","舍務老師","5319","C107"],
+["生輔組(C107)","李麗芬教官","5319","C107"],
+["總務處(C107)","許朝昇主任","5419","C207"],
+["總務處事務組","葉泓源組長","5411","C207"],
+["總務處事務組","陳麗滿","5413","C207"],
+["聖母樓B1","…","5420","C207"],
+["總務處營保組","林子豪組長","5416","C207"],
+["總務處營保組","蔡定翰","5416","C207"],
+["總務處營保組","洪祥仁","5414","C207"],
+["總務處營保組","梁顧鐘","5421","C207"],
+["總務處文書組","葉泓源組長","5411","C207"],
+["總務處文書組","陳雨寗","5415","C207"],
+["出納組","黃淑芬組長","5417","C306"],
+["出納組","劉晶晶","5418","C306"],
+["總務處環安組","許朝昇組長","5419","C207"],
+["人事室(C306)","陳惠明主任","5511","C306"],
+["人事室(C306)","廉琬琳","5513","C306"],
+["人事室(C306)","馮洨婷","5514","C306"],
+["會計室(C405)","林貴慧主任","5611","C405"],
+["會計室(C406)","陳曉薇","5612","C405"],
+["會計室(C407)","陳霈蓉","5613","C405"],
+["會計室(C408)","林佩如","5614","C405"],
+["研究發展處(C407)","王美業主任","5711","C407"],
+["校務發展組","黃敬傑組長","5712","C407"],
+["校務發展組","尤思佳","5715","C407"],
+["校務發展組","歐維萍","5716","C407"],
+["校務發展組","李慶瑋","5720","C407"],
+["校務發展組","魏怡珍經理","5721","C407"],
+["國際交流組","陳蓓蒂組長","5718","C407"],
+["國際交流組","歐維萍","5716","C407"],
+["國際交流組","李慶瑋","5720","C407"],
+["國際交流組","劉宇欣","5719","C407"],
+["產學合作組","陳蓓蒂組長","5718","C407"],
+["產學合作組","歐維萍","5716","C407"],
+["產學合作組","劉宇欣","5719","C407"],
+["就業實習組","李芸玫組長","5713","C407"],
+["就業實習組","尤思佳","5715","C407"],
+["就業實習組","歐維萍","5716","C407"],
+["就業實習組","劉宇欣","5719","C407"],
+["就業實習組","李慶瑋","5720","C407"],
+["老人長照中心","李芸玫中心主任","5713","C407"],
+["老人長照中心","李慶瑋","5720","C407"],
+["專業職能證照試務中心","…","6413","C407"],
+["護理科(S108)","郭懷婷主任","6111","S108"],
+["護理科(S108)","羅文華副主任","6114","S108"],
+["護理科(S108)","李瓊淑副主任","6115","S108"],
+["護理科(S108)","邱于倢","6112","S108"],
+["護理科(S108)","楊欣佳","6113","S108"],
+["護理科(S108)","陳家慧","6116","S108"],
+["口照科(C422)","洪文綺主任","6611","C422"],
+["口照科(C422)","黃子芸","6612","C422"],
+["口照科(C422)","柯雅馨","6613","C422"],
+["口照科(C422)","陳芊妤","6614","C422"],
+["口照科(C422)","黃婉昀","6615","C422"],
+["口照科(C422)","林子豪","6616","C422"],
+["幼保科(S103)","賴美玟主任","6211","S103"],
+["幼保科(S103)","陳脩文","6212","S103"],
+["幼保科(S103)","李秀瑶","6213","S103"],
+["幼保科(S103)","趙淑華","6214","S103"],
+["妝管科(C312)","陳佩彥主任","6311","C312"],
+["妝管科(C312)","林淑慧","6312","C312"],
+["妝管科(C312)","陳苡萱","6318","C312"],
+["資訊暨圖書中心(T607)","林志弘主任","5521","T607"],
+["資訊組(T604)","張宗榮組長","5525","T604"],
+["資訊組(T607)","朱怡民","5523","T607"],
+["資訊組(T607)","周予新","5524","T607"],
+["圖書組(T204)","姜元媛組長","5531","T204"],
+["圖書組(T204)","二樓流通櫃台","5532","T204"],
+["圖書組(T204)","侯玉欣","5532","T204"],
+["圖書組(T204)","侯玉欣","5533","T204"],
+["教研室C201","黃楷雯","6994","C201"],
+["教研室C201","李芸玫","6922","C201"],
+["教研室C201","吳美惠","6993","C201"],
+["教研室C201","湯雅雯","6921","C201"],
+["教研室C202","賴美玟","6923","C202"],
+["教研室C302","黃靖雯","6924","C302"],
+["教研室C311","呂美煥","6315","C311"],
+["教研室C311","彭馨民","6314","C311"],
+["教研室C313","郭梅珍","6925","C313"],
+["教研室C406","李麗燕","6911","C406"],
+["教研室C406","賴皓屏","6912","C406"],
+["教研室C406","戴慧琳","6913","C406"],
+["教研室C408","董靜茹","6952","C408"],
+["教研室C408","李瓊淑","6944","C408"],
+["教研室C408","金宥榛","6957","C408"],
+["教研室C409","黃一玲","6945","C409"],
+["教研室C409","杜文蘭","6946","C409"],
+["教研室C410","何美華","6947","C410"],
+["教研室C410","巫慧芳","6948","C410"],
+["教研室C410","金坤明","6920","C410"],
+["教研室C411","蔡菁菁","6949","C411"],
+["教研室C411","高秀君","6950","C411"],
+["教研室C411","王均安","6934","C411"],
+["教研室C412","王麗華","6917","C412"],
+["教研室C412","陳宣佑","6918","C412"],
+["教研室C412","范雅琪","6919","C412"],
+["教研室C413","鄭慧菁","6914","C413"],
+["教研室C415","許玉嫺","6915","C415"],
+["教研室C415","葉秀珍","6916","C415"],
+["教研室C416","倪雅華","6813","C416"],
+["教研室C416","施秀蓉","6812","C416"],
+["教研室C417","薛慧平","6810","C417"],
+["教研室C417","呂國勳","6811","C417"],
+["教研室C503","洪文綺","6904","C503"],
+["教研室C504","陳佩彥","6905","C504"],
+["教研室S202-1","賴思潔","6936","S202-1"],
+["教研室S202-1","梁貴閔","6973","S202-1"],
+["教研室S202-1","趙佑宸","6973","S202-1"],
+["教研室S202-1","吳淑婷","6951","S202-1"],
+["教研室S202-1","朱莉群","6951","S202-1"],
+["教研室S202-2","丁肇鳳","6935","S202-2"],
+["教研室S202-2","胡幼蓁","6935","S202-2"],
+["教研室S202-2","胡淑琄","6974","S202-2"],
+["教研室S202-2","陳珏如","6974","S202-2"],
+["教研室S202-2","簡綺彣","6955","S202-2"],
+["教研室S202-2","黃靜英","6955","S202-2"],
+["教研室S701-1","蔡明君","6937","S701-1"],
+["教研室S701-1","蔡秀雲","6938","S701-1"],
+["教研室S701-1","王雅惠","6938","S701-1"],
+["教研室S701-1","劉恆策","6939","S701-1"],
+["教研室S701-1","湯雅琳","6939","S701-1"],
+["教研室S701-1","林錦定","6940","S701-1"],
+["教研室S701-1","高瑜璟","6941","S701-1"],
+["教研室S701-1","林杏芳","6942","S701-1"],
+["教研室S701-1","黎凱婷","6942","S701-1"],
+["教研室S701-1","侯純仁","6953","S701-1"],
+["教研室S701-1","黃建華","6953","S701-1"],
+["教研室S701-1","梅襔","6954","S701-1"],
+["教研室S701-2","洪巧如","6975","S701-2"],
+["教研室S701-2","林佳蓉","6975","S701-2"],
+["教研室S701-2","吳佩甄","6978","S701-2"],
+["教研室S701-2","劉苑蓉","6977","S701-2"],
+["教研室S701-2","林詠寧","6976","S701-2"],
+["教研室T505","葉國良","6909","T505"],
+["教研室T505","邱淑如","6910","T505"],
+["教研室T602-1","陳友倫","6991","T602-1"],
+["教研室T602-1","楊清貴","6992","T602-1"],
+["教研室T602-1","王美業","6985","T602-2"],
+["教研室T602-1","吳俐雯","6984","T602-2"],
+["教研室T602-1","戴麗藹","6980","T602-2"],
+["教研室T702","王玉華","6964","T702"],
+["教研室T702","吳怡萍","6963","T702"],
+["教研室T702","謝家如","6962","T702"],
+["教研室T702","黃秉炘","6960","T702"],
+["教研室T702","林玫君","6959","T702"],
+["教研室T702","何宜倩","6958","T702"],
+["教研室T702","黃世欣","6965","T702"],
+["教研室T702","陳怡佳","6966","T702"],
+["教研室T702","林冠伶","6968","T702"],
+["教研室T702","陳建榮","6969","T702"],
+["教研室T702","陳惠明","6970","T702"],
+["教研室T702","李書芬","6971","T702"],
+["教研室T702","江悅慈","6972","T702"],
+["教研室T704","林家玉","6926","T704"],
+["教研室T704","郭燕菁","6926","T704"],
+["教研室T704","高家珍","6926","T704"],
+["教研室T704","洪慧娟","6927","T704"],
+["教研室T704","陳佳雯","6927","T704"],
+["教研室T704","傅乙庭","6927","T704"],
+["教研室D107","陳蓓蒂","6932","D107"],
+["S302","專業技能教室","6122","S302"],
+["C212","化學實驗室","6122","C212"],
+["C213","生物實驗室","6122","C213"],
+["CB11","營養教室","6122","CB11"],
+["S603","基護示教室","6121","S603"],
+["C307","內外身評示教室","6121","C307"],
+["S503","兒科示教室","6121","S503"],
+["S504","產科示教室","6121","S504"],
+["C309","美膚專業教室","6321","C309"],
+["C303","彩妝專業教室","6316","C303"],
+["C304","美髮專業教室","6321","C304"],
+["C310","共同儀器室","6321","C310"],
+["C310","化妝品調製室","6321","C310"],
+["C423","口衛專業技能教室","5122","C423"],
+["C113","嬰幼兒教學資源教室","6241","C113"],
+["S104","教保多功能專業教室","6241","S104"],
+["CB08","B1視聽教室","5231","CB08"],
+["S208","演講廳音控室","5431","S208"],
+["C308","會議室","5432","C308"],
+["C403","會議室","5433","C403"],
+["T409","貴賓室德肋撒","5434","T409"],
+["D405","聖堂","6123","D405"],
+["D404","身心靈健康館","5731","D404"],
+["T410","德蘭視聽教室","6421","T410"],
+["T602","語言教室","6521","T602"],
+["T102","傅麗珍園長","6227","T102"],
+["…","幼兒園辦公室","6221","…"],
+["…","鯨魚班(幼幼班)","6225","…"],
+["…","綿羊班(小班)","6222","…"],
+["…","大象班(大班)","6223","…"],
+["…","河馬班(幼幼班)","6226","…"],
+["…","浣熊班(中班)","6224","…"],
+["…","課照中心(B班)","6230","…"],
+["…","課照中心(A班)","6231","…"],
+["…","課照中心(D班)","6228","…"],
+["宿舍D601","葉宜婷","5351","D601"],
+["宿舍D901","洪美雲","5341","D901"],
+["宿舍D1001","李玲華","5352","D1001"],
+["耕莘樓(CB08)","…","5335","CB08"],
+["C111辦公室","…","6515","C111"]
+];
+/* ========== 以上為 data ========== */
+
+/* 轉成物件列表 */
+const rows = data.slice(1).map(r=>({部門:r[0],姓名:r[1],分機:r[2],辦公室編號:r[3]}));
+
+const tbody = document.getElementById('tbody');
+const searchInput = document.getElementById('search');
+const deptFilter = document.getElementById('deptFilter');
+const sortBySelect = document.getElementById('sortBy');
+const emptyDiv = document.getElementById('empty');
+const resultWrap = document.getElementById('resultWrap');
+const countDiv = document.getElementById('count');
+const tableWrap = document.getElementById('tableWrap');
+
+function populateDept(){
+  const depts = Array.from(new Set(rows.map(r=>r.部門).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'zh-Hant-TW'));
+  deptFilter.innerHTML = '<option value="">全部部門</option>' + depts.map(d=>`<option value="${escapeHtmlAttr(d)}">${escapeHtml(d)}</option>`).join('');
+}
+
+/* escape helpers */
+function escapeHtml(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeHtmlAttr(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+
+/* fuzzy regex builder: 將每個字串字元拆開並以 .* 連接 (過濾空白) */
+function fuzzyRegex(str){
+  if(!str) return null;
+  // 若輸入包含空白，把空白視為多字分隔 (保留所有非空字)
+  const chars = str.split('').filter(ch=>ch.trim()!=='').map(ch=>ch.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+  if(chars.length===0) return null;
+  return new RegExp(chars.join('.*'),'i');
+}
+
+/* debounce for input */
+let inputTimer = null;
+function onInputChange(){
+  clearTimeout(inputTimer);
+  inputTimer = setTimeout(render, 150); // 150ms debounce for snappy feel
+}
+
+function render(){
+  const kwRaw = searchInput.value.trim();
+  const kwLower = kwRaw.toLowerCase();
+  const dept = deptFilter.value;
+
+  // hide results when nothing entered and no dept selected
+  if(!kwRaw && !dept){
+    resultWrap.style.display='none';
+    return;
+  }
+  resultWrap.style.display='block';
+
+  const regex = fuzzyRegex(kwRaw);
+  let filtered = rows.filter(r=>{
+    if(dept && r.部門 !== dept) return false;
+    if(!kwRaw) return true;
+    // combine searchable fields
+    const hay = [r.部門,r.姓名,r.分機,r.辦公室編號].join(' ');
+    return regex ? regex.test(hay) : hay.toLowerCase().includes(kwLower);
+  });
+
+  // sorting
+  const sortKey = sortBySelect.value;
+  if(sortKey){
+    filtered.sort((a,b)=>{
+      const A = (a[sortKey]||'').toString();
+      const B = (b[sortKey]||'').toString();
+      if(sortKey==='分機'){
+        // prefer numeric compare for phone-like fields
+        const nA = A.replace(/[^0-9]/g,'');
+        const nB = B.replace(/[^0-9]/g,'');
+        if(nA && nB) return parseInt(nA,10) - parseInt(nB,10);
+      }
+      return A.localeCompare(B,'zh-Hant-TW',{numeric:true});
+    });
+  }
+
+  // render
+  if(filtered.length===0){
+    tbody.innerHTML='';
+    emptyDiv.style.display='block';
+    countDiv.innerHTML = `<span class="small">共 0 筆</span>`;
+    return;
+  }
+  emptyDiv.style.display='none';
+  countDiv.innerHTML = `<span class="small">共 <span class="highlight">${filtered.length}</span> 筆</span>`;
+
+  tbody.innerHTML = filtered.map(r=>{
+    return `<tr><td>${escapeHtml(r.部門)}</td><td>${escapeHtml(r.姓名)}</td><td>${escapeHtml(r.分機)}</td><td>${escapeHtml(r.辦公室編號)}</td></tr>`;
+  }).join('');
+}
+
+/* header click sorting */
+document.querySelectorAll('th[data-key]').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    sortBySelect.value = th.getAttribute('data-key');
+    render();
+    // 滾回表格頂端
+    tableWrap.scrollTop = 0;
+  });
+});
+
+/* events */
+searchInput.addEventListener('input', onInputChange);
+deptFilter.addEventListener('input', render);
+sortBySelect.addEventListener('input', render);
+
+/* init */
+populateDept();
+
+/* optional: if user presses Enter on search, scroll first match into view */
+searchInput.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){ e.preventDefault(); render(); const firstRow = tbody.querySelector('tr'); if(firstRow) firstRow.scrollIntoView({behavior:'smooth',block:'center'}); }
+});
+</script>
+</body>
+</html>
