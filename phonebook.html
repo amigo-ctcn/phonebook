@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>分機查詢系統（宜蘭校區）</title>
+<title>分機查詢系統（新店校區）</title>
 <style>
   :root{
     --bg:#f3f4f6;--card:#ffffff;--text:#1f2937;--muted:#6b7280;
@@ -13,11 +13,11 @@
   @media (prefers-color-scheme: dark){
     :root{--bg:#0b1220;--card:#111827;--text:#f9fafb;--muted:#9ca3af;
     --accent:#3b82f6;--accent-light:#172554;--shadow:0 8px 24px rgba(0,0,0,0.6);} }
-  html,body{height:100%;margin:0;font-family:system-ui,'Noto Sans TC',Arial;background:var(--bg);color:var(--text);} 
+  html,body{height:100%;margin:0;font-family:system-ui,'Noto Sans TC',Arial;background:var(--bg);color:var(--text);}
   body{display:flex;justify-content:center;padding:20px}
   .container{width:100%;max-width:820px;margin-top:20px;text-align:center}
   h1{font-size:22px;margin:0 0 12px;font-weight:700}
-  .controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center;margin-bottom:14px;padding:16px;background:var(--card);border-radius:14px;box-shadow:var(--shadow);} 
+  .controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center;margin-bottom:14px;padding:16px;background:var(--card);border-radius:14px;box-shadow:var(--shadow);}
   .controls>*{flex:1;min-width:160px}
   input,select{padding:12px;border-radius:10px;border:1px solid #d1d5db;font-size:16px;width:100%;box-sizing:border-box}
   input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
@@ -29,16 +29,59 @@
   th{position:sticky;top:0;background:var(--card);color:var(--accent)}
   .small{font-size:13px;color:var(--muted);padding:12px;text-align:left}
   .highlight{color:var(--accent);font-weight:600}
+
+@media print {
+
+  /* 隱藏搜尋列 */
+  .controls {
+    display: none !important;
+  }
+
+  /* 取消捲動容器限制（重點） */
+  .tableWrap {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* 表格允許自動分頁 */
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  body {
+    padding: 0;
+  }
+
+  .container {
+    max-width: none;
+    margin: 0;
+  }
+}
+  
 </style>
 </head>
 <body>
 <div class="container">
 <h1>分機查詢系統（新店校區）</h1>
+<div class="small" id="lastUpdate"></div>
 
 <div class="controls">
   <input id="search" type="text" placeholder="輸入姓名 / 職稱 / 部門（姓名可模糊搜尋）" />
   <select id="deptFilter"><option value="">全部部門</option></select>
+  
+<button onclick="printTable()">列印</button>
+<button onclick="exportCSV()">匯出 CSV</button>
 </div>
+
 
 <div id="resultWrap">
   <div class="card">
@@ -56,32 +99,11 @@
 </div>
 </div>
 
-<script>
-/*************************************************
- * 1️⃣ 文字正規化（修正 林/林、劉/劉 等問題）
- *************************************************/
-function normalizeText(str){
-  return (str||'')
-    .normalize('NFKC')
-    .replace(/\s+/g,'')
-    .toLowerCase();
-}
-
-/*************************************************
- * 2️⃣ 姓名用「模糊搜尋」
- *************************************************/
-function fuzzyRegex(str){
-  if(!str) return null;
-  const chars = normalizeText(str).split('');
-  if(chars.length===0) return null;
-  return new RegExp(chars.join('.*'),'i');
-}
-
-/*************************************************
- * 3️⃣ 【請在這裡貼上你的完整資料陣列】
- * 格式需與原本一致
- *************************************************/
-const data = [
+<!-- ===================================================== -->
+<!-- ✅ 資料區塊：更新名單只需要修改這裡即可 -->
+<!-- ===================================================== -->
+<script id="phonebook-data">
+const PHONEBOOK_DATA = [
 ["部門","姓名","分機","辦公室編號"],
 ["…","耕莘健康管理專科學校","2219-1131","…"],
 ["校長室","…","2219-7718","…"],
@@ -336,26 +358,56 @@ const data = [
 ["耕莘樓(CB08)","…","5335","CB08"],
 ["C111辦公室","…","6515","C111"]
 ];
-/*************************************************
- * 4️⃣ 轉成物件
- *************************************************/
+</script>
+
+<!-- ===================================================== -->
+<!-- ✅ 工具功能：列印 / 匯出 -->
+<!-- ===================================================== -->
+<script>
+function exportCSV(){
+  const csv = PHONEBOOK_DATA
+    .map(r => r.map(v => `"${(v??'').toString().replace(/"/g,'""')}"`).join(','))
+    .join('\n');
+
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'phonebook.csv';
+  a.click();
+}
+
+function printTable(){
+  window.print();
+}
+</script>
+
+<!-- ===================================================== -->
+<!-- ✅ 功能程式：請勿修改 -->
+<!-- ===================================================== -->
+<script>
+function normalizeText(str){
+  return (str||'').normalize('NFKC').replace(/\s+/g,'').toLowerCase();
+}
+function fuzzyRegex(str){
+  if(!str) return null;
+  const chars = normalizeText(str).split('');
+  return chars.length ? new RegExp(chars.join('.*'),'i') : null;
+}
+
+const data = PHONEBOOK_DATA;
 const rows = data.slice(1).map(r=>({
-  部門:r[0],
-  姓名:r[1],
-  分機:r[2],
-  教室編號:r[3]
+  部門:r[0], 姓名:r[1], 分機:r[2], 教室編號:r[3]
 }));
 
-const searchInput = document.getElementById('search');
-const deptFilter  = document.getElementById('deptFilter');
-const tbody       = document.getElementById('tbody');
-const emptyDiv    = document.getElementById('empty');
-const countDiv    = document.getElementById('count');
-const resultWrap  = document.getElementById('resultWrap');
+const searchInput=document.getElementById('search');
+const deptFilter=document.getElementById('deptFilter');
+const tbody=document.getElementById('tbody');
+const emptyDiv=document.getElementById('empty');
+const countDiv=document.getElementById('count');
+const resultWrap=document.getElementById('resultWrap');
 
-/*************************************************
- * 5️⃣ 部門下拉選單
- *************************************************/
 [...new Set(rows.map(r=>r.部門).filter(Boolean))]
   .sort((a,b)=>a.localeCompare(b,'zh-Hant-TW'))
   .forEach(d=>{
@@ -364,46 +416,34 @@ const resultWrap  = document.getElementById('resultWrap');
     deptFilter.appendChild(o);
   });
 
-/*************************************************
- * 6️⃣ 核心搜尋邏輯（需求重點）
- * ✔ 姓名 / 部門：模糊搜尋
- * ✔ 分機 / 教室：不模糊（只有數字才搜分機）
- *************************************************/
 function render(){
   const kwRaw = searchInput.value.trim();
   const dept  = deptFilter.value;
 
-  if(!kwRaw && !dept){
-    resultWrap.style.display='none';
-    return;
-  }
-  resultWrap.style.display='block';
+  // ✅ 永遠顯示結果區
+  resultWrap.style.display = 'block';
 
   const regex = fuzzyRegex(kwRaw);
   const isNumeric = /^[0-9]+$/.test(kwRaw);
 
-  let filtered = rows.filter(r=>{
+  const filtered = rows.filter(r=>{
     if(dept && r.部門 !== dept) return false;
     if(!kwRaw) return true;
-
-    // 🔹 全是數字 → 只搜尋分機
-    if(isNumeric){
-      return r.分機 && r.分機.toString().includes(kwRaw);
-    }
-
-    // 🔹 文字搜尋：只模糊「部門 + 姓名」
+    if(isNumeric) return r.分機 && r.分機.toString().includes(kwRaw);
     const textHay = normalizeText(r.部門 + r.姓名);
-    return regex ? regex.test(textHay) : textHay.includes(normalizeText(kwRaw));
+    return regex
+      ? regex.test(textHay)
+      : textHay.includes(normalizeText(kwRaw));
   });
 
-  tbody.innerHTML='';
-  if(filtered.length===0){
-    emptyDiv.style.display='block';
-    countDiv.textContent='共 0 筆';
+  tbody.innerHTML = '';
+  if(filtered.length === 0){
+    emptyDiv.style.display = 'block';
+    countDiv.textContent = '共 0 筆';
     return;
   }
 
-  emptyDiv.style.display='none';
+  emptyDiv.style.display = 'none';
   countDiv.innerHTML = `共 <span class="highlight">${filtered.length}</span> 筆`;
 
   filtered.forEach(r=>{
@@ -416,8 +456,11 @@ function render(){
   });
 }
 
-searchInput.addEventListener('input', render);
-deptFilter.addEventListener('change', render);
+searchInput.addEventListener('input',render);
+deptFilter.addEventListener('change',render);
+
+render();
 </script>
 </body>
 </html>
+
