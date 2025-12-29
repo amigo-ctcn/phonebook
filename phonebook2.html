@@ -294,7 +294,7 @@ function render(){
     if(dept && r.部門 !== dept) return false;
     if(!kwRaw) return true;
     if(isNumeric) return r.分機 && r.分機.toString().includes(kwRaw);
-    const textHay = normalizeText(r.部門 + r.姓名);
+    const textHay = normalizeText(r.部門 + r.姓名 + r.教室編號);
     return regex
       ? regex.test(textHay)
       : textHay.includes(normalizeText(kwRaw));
