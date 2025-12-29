@@ -31,42 +31,14 @@
   .highlight{color:var(--accent);font-weight:600}
 
 @media print {
-
-  /* 隱藏搜尋列 */
-  .controls {
-    display: none !important;
-  }
-
-  /* 取消捲動容器限制（重點） */
-  .tableWrap {
-    max-height: none !important;
-    overflow: visible !important;
-  }
-
-  /* 表格允許自動分頁 */
-  table {
-    page-break-inside: auto;
-  }
-
-  tr {
-    page-break-inside: avoid;
-    page-break-after: auto;
-  }
-
-  thead {
-    display: table-header-group;
-  }
-
-  body {
-    padding: 0;
-  }
-
-  .container {
-    max-width: none;
-    margin: 0;
-  }
+  .controls { display: none !important; }
+  .tableWrap { max-height: none !important; overflow: visible !important; }
+  table { page-break-inside: auto; }
+  tr { page-break-inside: avoid; page-break-after: auto; }
+  thead { display: table-header-group; }
+  body { padding: 0; }
+  .container { max-width: none; margin: 0; }
 }
-  
 </style>
 </head>
 <body>
@@ -75,13 +47,11 @@
 <div class="small" id="lastUpdate"></div>
 
 <div class="controls">
-  <input id="search" type="text" placeholder="輸入姓名 / 職稱 / 部門（姓名可模糊搜尋）" />
+  <input id="search" type="text" placeholder="輸入姓名 / 職稱 / 部門 / 教室編號" />
   <select id="deptFilter"><option value="">全部部門</option></select>
-  
-<button onclick="printTable()">列印</button>
-<button onclick="exportCSV()">匯出 CSV</button>
+  <button onclick="printTable()">列印</button>
+  <button onclick="exportCSV()">匯出 CSV</button>
 </div>
-
 
 <div id="resultWrap">
   <div class="card">
@@ -99,9 +69,6 @@
 </div>
 </div>
 
-<!-- ===================================================== -->
-<!-- ✅ 資料區塊：更新名單只需要修改這裡即可 -->
-<!-- ===================================================== -->
 <script id="phonebook-data">
 const PHONEBOOK_DATA = [
   ["部門","姓名","分機","教室編號"],
@@ -224,32 +191,21 @@ const PHONEBOOK_DATA = [
 ];
 </script>
 
-<!-- ===================================================== -->
-<!-- ✅ 工具功能：列印 / 匯出 -->
-<!-- ===================================================== -->
 <script>
 function exportCSV(){
   const csv = PHONEBOOK_DATA
     .map(r => r.map(v => `"${(v??'').toString().replace(/"/g,'""')}"`).join(','))
     .join('\n');
-
   const BOM = '\uFEFF';
   const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
-
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'phonebook.csv';
+  a.download = 'phonebook_yilan.csv';
   a.click();
 }
-
-function printTable(){
-  window.print();
-}
+function printTable(){ window.print(); }
 </script>
 
-<!-- ===================================================== -->
-<!-- ✅ 功能程式：請勿修改 -->
-<!-- ===================================================== -->
 <script>
 function normalizeText(str){
   return (str||'').normalize('NFKC').replace(/\s+/g,'').toLowerCase();
@@ -283,8 +239,6 @@ const resultWrap=document.getElementById('resultWrap');
 function render(){
   const kwRaw = searchInput.value.trim();
   const dept  = deptFilter.value;
-
-  // ✅ 永遠顯示結果區
   resultWrap.style.display = 'block';
 
   const regex = fuzzyRegex(kwRaw);
@@ -293,8 +247,17 @@ function render(){
   const filtered = rows.filter(r=>{
     if(dept && r.部門 !== dept) return false;
     if(!kwRaw) return true;
-    if(isNumeric) return r.分機 && r.分機.toString().includes(kwRaw);
-    const textHay = normalizeText(r.部門 + r.姓名 + r.教室編號);
+
+    // ✅ 關鍵修正：搜尋字串包含 部門 + 姓名 + 教室編號
+    const textHay = normalizeText((r.部門||'') + (r.姓名||'') + (r.教室編號||''));
+    
+    // ✅ 關鍵修正：若為純數字，同時檢查分機與教室編號文字
+    if(isNumeric) {
+      const matchExt = r.分機 && r.分機.toString().includes(kwRaw);
+      const matchText = textHay.includes(normalizeText(kwRaw));
+      return matchExt || matchText;
+    }
+
     return regex
       ? regex.test(textHay)
       : textHay.includes(normalizeText(kwRaw));
@@ -322,9 +285,7 @@ function render(){
 
 searchInput.addEventListener('input',render);
 deptFilter.addEventListener('change',render);
-
 render();
 </script>
 </body>
 </html>
-
