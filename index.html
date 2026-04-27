@@ -1,68 +1,55 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>分機查詢系統 - 校區選擇</title>
-    <style>
-        :root{
-            --bg:#f3f4f6;
-            --card:#ffffff;
-            --text:#1f2937;
-            --accent:#2563eb;
-            --shadow:0 8px 24px rgba(0,0,0,0.12);
-        }
-        @media (prefers-color-scheme: dark){
-            :root{
-                --bg:#0b1220;
-                --card:#111827;
-                --text:#f9fafb;
-                --accent:#3b82f6;
-                --shadow:0 8px 24px rgba(0,0,0,0.6);
-            }
-        }
-        html,body{height:100%;margin:0;font-family:system-ui,'Noto Sans TC',Arial;background:var(--bg);color:var(--text);}
-        body{display:flex;justify-content:center;align-items:center;padding:20px;text-align:center;}
-        .container{
-            width:100%;
-            max-width:400px;
-            padding:30px;
-            background:var(--card);
-            border-radius:14px;
-            box-shadow:var(--shadow);
-            animation:fadeIn .36s ease;
-        }
-        @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-        h1{font-size:24px;margin:0 0 20px;font-weight:700;}
-        .choice-button{
-            display: block;
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: none;
-            border-radius: 10px;
-            background-color: var(--accent);
-            color: #ffffff;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            transition: background-color 0.2s, transform 0.1s;
-            box-sizing: border-box;
-        }
-        .choice-button:hover{
-            background-color: #1e50c4;
-        }
-        .choice-button:active{
-            transform: scale(0.98);
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>分機查詢系統 - 校區選擇</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* 校區選擇頁專用樣式 */
+    html, body { height: 100%; margin: 0; }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      text-align: center;
+    }
+    .container {
+      max-width: 400px;
+      padding: 30px;
+      animation: fadeIn .36s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: none; }
+    }
+    h1 { font-size: 24px; margin: 0 0 20px; font-weight: 700; }
+    .choice-button {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: none;
+      border-radius: 10px;
+      background-color: var(--accent);
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background-color 0.2s, transform 0.1s;
+      box-sizing: border-box;
+    }
+    .choice-button:hover  { background-color: #1e50c4; }
+    .choice-button:active { transform: scale(0.98); }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🏥 請選擇分機查詢校區</h1>
-        <a href="phonebook.html" class="choice-button" aria-label="新店校區分機查詢">新店校區</a>
-        <a href="phonebook2.html" class="choice-button" aria-label="宜蘭校區分機查詢">宜蘭校區</a>
-    </div>
+  <div class="container">
+    <h1>🏥 請選擇分機查詢校區</h1>
+    <a href="phonebook.html" class="choice-button" aria-label="新店校區分機查詢">新店校區</a>
+    <a href="phonebook2.html" class="choice-button" aria-label="宜蘭校區分機查詢">宜蘭校區</a>
+  </div>
 </body>
 </html>
